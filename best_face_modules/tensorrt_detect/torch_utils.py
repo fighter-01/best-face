@@ -109,6 +109,53 @@ def det_postprocess(data: Tuple[Tensor, Tensor, Tensor, Tensor]):
     return bboxes, scores, labels
 
 
+def det_postprocess_new(preds, scale_h, scale_w, padh, padw):
+    preds = preds.transpose((0, 2, 1))
+    bboxes = preds[:,:,:4]
+    scores = preds[:,:,4:5]
+    landmarks = preds[:,:,5:]
+
+    bboxes = np.concatenate(bboxes, axis=0)
+    x1y1 = (bboxes[:, 0:2] * 2 - bboxes[:, 2:]) / 2
+    x2y2 = (bboxes[:, 0:2] * 2 + bboxes[:, 2:]) / 2
+    bboxes[:, 0:2] = x1y1
+    bboxes[:, 2:] = x2y2
+    scores = np.concatenate(scores, axis=0)
+    landmarks = np.concatenate(landmarks, axis=0)
+
+    bboxes -= np.array([[padw, padh, padw, padh]])  ###合理使用广播法则
+    bboxes *= np.array([[scale_w, scale_h, scale_w, scale_h]])
+    landmarks -= np.tile(np.array([padw, padh, 0]), 5).reshape((1,15))
+    landmarks *= np.tile(np.array([scale_w, scale_h, 1]), 5).reshape((1,15))
+
+    bboxes_wh = bboxes.copy()
+    bboxes_wh[:, 2:4] = bboxes[:, 2:4] - bboxes[:, 0:2]  ####xywh
+
+    classIds = np.argmax(scores, axis=1)
+    confidences = np.max(scores, axis=1)  ####max_class_confidence
+
+    mask = confidences>self.conf_threshold
+    bboxes_wh = bboxes_wh[mask]  ###合理使用广播法则
+    confidences = confidences[mask]
+    classIds = classIds[mask]
+    landmarks = landmarks[mask]
+    if len(landmarks) <= 0:
+        print('nothing detect')
+        return np.array([]), np.array([]), np.array([]), np.array([])
+
+    indices = cv2.dnn.NMSBoxes(bboxes_wh.tolist(), confidences.tolist(), self.conf_threshold,
+                                self.iou_threshold).flatten()
+    if len(indices) > 0:
+        mlvl_bboxes = bboxes_wh[indices]
+        confidences = confidences[indices]
+        classIds = classIds[indices]
+        landmarks = landmarks[indices]
+        return mlvl_bboxes, confidences, classIds, landmarks
+    else:
+        print('nothing detect')
+        return np.array([]), np.array([]), np.array([]), np.array([])
+
+
 def crop_mask(masks: Tensor, bboxes: Tensor) -> Tensor:
     n, h, w = masks.shape
     x1, y1, x2, y2 = torch.chunk(bboxes[:, :, None], 4, 1)  # x1 shape(1,1,n)

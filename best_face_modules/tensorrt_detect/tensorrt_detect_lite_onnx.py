@@ -4,7 +4,7 @@ import cv2
 import torch
 import numpy as np
 from best_face_modules.tensorrt_detect import TRTModule  # isort:skip
-from best_face_modules.tensorrt_detect.torch_utils import det_postprocess,pose_postprocess
+from best_face_modules.tensorrt_detect.torch_utils import det_postprocess, det_postprocess_new
 from best_face_modules.tensorrt_detect.utils import blob, letterbox, path_to_list
 import time
 import threading
@@ -19,7 +19,8 @@ class TensorrtYolov8():
         self.Engine = TRTModule(engine_path, self.device)
         self.H, self.W = self.Engine.inp_info[0].shape[-2:]
         # set desired output names order
-        self.Engine.set_desired(['num_dets', 'bboxes', 'scores', 'labels'])
+        # self.Engine.set_desired(['num_dets', 'bboxes', 'scores', 'labels'])
+        self.Engine.set_desired(['output0', ])
         # 现有的初始化代码...
         self.lock = threading.Lock()  # 添加这行代码来初始化锁
 
@@ -38,10 +39,12 @@ class TensorrtYolov8():
             print(f"Shape of data: {tensor.shape}")
             print(f"Data type: {tensor.dtype}")
 
-        bboxes, scores, kpts=pose_postprocess(data)
+        bboxes, scores, labels, landmarks = det_postprocess_new(data[0].cpu().numpy(), ratio, ratio, dwdh[1], dwdh[0])
+        if len(bboxes) == 0:
+            return np.empty((0, 16))
 
-        print(bboxes)
-        return   bboxes, scores, kpts
+        dets = np.hstack((bboxes, scores, labels, landmarks))
+        return dets
 
     def draw_detections(self, image, boxes, scores, kpts):
         for box, score, kp in zip(boxes, scores, kpts):
