@@ -39,7 +39,9 @@ class TensorrtYolov8():
             print(f"Shape of data: {tensor.shape}")
             print(f"Data type: {tensor.dtype}")
 
-        bboxes, scores, labels, landmarks = det_postprocess_new(data.cpu().numpy(), ratio, ratio, dwdh[1], dwdh[0])
+        data = data.cpu()
+        data = data.numpy()
+        bboxes, scores, labels, landmarks = det_postprocess_new(data, ratio, ratio, dwdh[1], dwdh[0])
         if len(bboxes) == 0:
             return np.empty((0, 16))
 
