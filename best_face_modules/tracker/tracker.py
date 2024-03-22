@@ -1,3 +1,5 @@
+import sys
+sys.path.append("/data/zhaojd-a/github_codes/best-face")
 from best_face_modules.base_model.base_model import BaseModel
 from best_face_modules.tracker import sort
 import numpy as np
@@ -19,24 +21,26 @@ class Tracker:
 
 
     def track(self, frame):
-
         # detect
         #boxes, _ = self.detector.run(image=frame)
         track_start_time = time.perf_counter()
         boxes,landmarks= self.detector.run(image=frame)
         combined_format = []
 
-        for box, landmark in zip(boxes, landmarks):
-            # 展开 box 前4个元素和每个 landmark 坐标点
-            combined = [*box[:4]]
-            for point in landmark:
-                combined.extend(point)  # 添加 landmark 中每个点的 x 和 y
-            combined.extend([box[4], int(box[5])])  # 添加得分和类别
-            combined_format.append(combined)
+        if 0 == len(boxes):
+            combined_format = np.empty((0, 16))
+        else:
+            for box, landmark in zip(boxes, landmarks):
+                # 展开 box 前4个元素和每个 landmark 坐标点
+                combined = [*box[:4]]
+                for point in landmark:
+                    combined.extend(point)  # 添加 landmark 中每个点的 x 和 y
+                combined.extend([box[4], int(box[5])])  # 添加得分和类别
+                combined_format.append(combined)
 
         # 打印结果查看
-        for item in combined_format:
-            print(item)
+        # for item in combined_format:
+        #     print(item)
         # 现在你可以安全地将它转换为 NumPy 数组
         tracks_array = np.array(combined_format)
         track_time = (time.perf_counter() - track_start_time) * 1000

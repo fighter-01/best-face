@@ -117,7 +117,7 @@ class KalmanBoxTracker(object):
     self.hit_streak = 0
     self.age = 0
     # track box with keypoints
-    self.keypoints = bbox[5:]
+    self.keypoints = bbox[4:]
 
   def update(self,bbox):
     """
@@ -128,7 +128,7 @@ class KalmanBoxTracker(object):
     self.hits += 1
     self.hit_streak += 1
     self.kf.update(convert_bbox_to_z(bbox))
-    self.keypoints = bbox[5:]
+    self.keypoints = bbox[4:]
 
   def predict(self):
     """
@@ -149,7 +149,8 @@ class KalmanBoxTracker(object):
     Returns the current bounding box estimate.
     """
     bbox = convert_x_to_bbox(self.kf.x)
-    return np.append(bbox, np.array(self.keypoints))
+    keypoints = np.array(self.keypoints).reshape((1, -1))
+    return np.hstack((bbox, keypoints))
 
 
 def associate_detections_to_trackers(detections,trackers,iou_threshold = 0.3):
@@ -253,7 +254,7 @@ class Sort(object):
           removed_trackers.append(track.id)
     if(len(ret)>0):
       return np.concatenate(ret), removed_trackers
-    return np.empty((0,5)), removed_trackers
+    return np.empty((0,17)), removed_trackers
 
 def parse_args():
     """Parse input arguments."""
