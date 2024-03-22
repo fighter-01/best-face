@@ -1,14 +1,14 @@
 from best_face_modules.base_model.base_model import BaseModel
 from best_face_modules.tracker import sort
-from best_face_modules.tensorrt_detect.tensorrt_detect import TensorrtYolov8
+#from best_face_modules.tensorrt_detect.tensorrt_detect import TensorrtYolov8
 #from best_face_modules.tensorrt_detect.infer_without_torch import TensorrtCudaYolov8
-
+#from best_face_modules.tensorrt_detect.tensorrt_detect_lite_onnx import TensorrtYolov8
 import time
 class Tracker:
     def __init__(
         self,
-        detector:TensorrtYolov8,
-        #detector: BaseModel,
+        #detector:TensorrtYolov8,
+        detector: BaseModel,
         max_age=1,
         min_hits=3,
         iou_threshold=0.3,
@@ -22,10 +22,9 @@ class Tracker:
         # detect
         #boxes, _ = self.detector.run(image=frame)
         track_start_time = time.perf_counter()
-        boxes= self.detector.run(image=frame)
+        boxes,landmarks= self.detector.run(image=frame)
         track_time = (time.perf_counter() - track_start_time) * 1000
         print(f"infer time: {track_time:.3f} ms")
-
         # sort
         track_start_time = time.perf_counter()
         trackers, removed_trackers = self.sort_tracker.update(boxes)
@@ -58,13 +57,13 @@ class Tracker:
 
 
 if __name__ == "__main__":
-    from face_recognition_modules.face_detection.yolov8_face import Yolov8Face
+    from best_face_modules.face_detection.yolov8_face import Yolov8Face
     import cv2
-    from face_recognition_modules.face_alignment.face_landmarks import FaceLandmarks
+    from best_face_modules.face_detection.face_landmarks import FaceLandmarks
 
 
-    yolo8face = Yolov8Face(model_path="E:/pythonproject/face_recognition_system/models/yolov8-lite-t.onnx", device="gpu")
-    landmarks_det = FaceLandmarks(model_path="E:/pythonproject/face_recognition_system/models/student_128.onnx", device="gpu")
+    yolo8face = Yolov8Face(model_path="E:/pythonproject/best_face/models/yolov8-lite-t.onnx", device="gpu")
+    landmarks_det = FaceLandmarks(model_path="E:/pythonproject/best_face/models/student_128.onnx", device="gpu")
     tracker = Tracker(yolo8face)
     cap = cv2.VideoCapture("E:/cv/testVideo/test.mp4")
     while True:
