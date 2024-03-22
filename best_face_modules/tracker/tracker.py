@@ -1,5 +1,6 @@
 from best_face_modules.base_model.base_model import BaseModel
 from best_face_modules.tracker import sort
+import numpy as np
 #from best_face_modules.tensorrt_detect.tensorrt_detect import TensorrtYolov8
 #from best_face_modules.tensorrt_detect.infer_without_torch import TensorrtCudaYolov8
 #from best_face_modules.tensorrt_detect.tensorrt_detect_lite_onnx import TensorrtYolov8
@@ -23,11 +24,26 @@ class Tracker:
         #boxes, _ = self.detector.run(image=frame)
         track_start_time = time.perf_counter()
         boxes,landmarks= self.detector.run(image=frame)
+        combined_format = []
+
+        for box, landmark in zip(boxes, landmarks):
+            # 展开 box 前4个元素和每个 landmark 坐标点
+            combined = [*box[:4]]
+            for point in landmark:
+                combined.extend(point)  # 添加 landmark 中每个点的 x 和 y
+            combined.extend([box[4], int(box[5])])  # 添加得分和类别
+            combined_format.append(combined)
+
+        # 打印结果查看
+        for item in combined_format:
+            print(item)
+        # 现在你可以安全地将它转换为 NumPy 数组
+        tracks_array = np.array(combined_format)
         track_time = (time.perf_counter() - track_start_time) * 1000
         print(f"infer time: {track_time:.3f} ms")
         # sort
         track_start_time = time.perf_counter()
-        trackers, removed_trackers = self.sort_tracker.update(boxes)
+        trackers, removed_trackers = self.sort_tracker.update(tracks_array)
         track_time = (time.perf_counter() - track_start_time) * 1000
         print(f"track time: {track_time:.3f} ms")
         '''
